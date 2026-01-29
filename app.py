@@ -13,6 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 import io
 import os
 import urllib.request
+import re
 
 # --------------------------------------------------
 # ONLINE FONT (GOOGLE FONTS – TÜRKÇE UYUMLU)
@@ -41,7 +42,7 @@ st.set_page_config(
 )
 
 # --------------------------------------------------
-# API ANAHTARI
+# API
 # --------------------------------------------------
 try:
     client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -74,22 +75,27 @@ MEB_DERSLERI = {
 }
 
 # --------------------------------------------------
-# SİSTEM TALİMATI (MARKDOWN YOK)
+# SİSTEM TALİMATI
 # --------------------------------------------------
 gem_talimatlari = """
 Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
 Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
-
-Kurallar:
-- Markdown kullanma
-- Yıldız, başlık, madde işareti kullanma
-- Düz paragraf metni üret
-- Türkçe karakterlere dikkat et
-- Kısa, net ve öğretmenlerin doğrudan kullanabileceği bir dil kullan
+2024-2026 güncel eğitim teknolojilerini kullan.
 """
 
 # --------------------------------------------------
-# PDF OLUŞTURMA (LOGO + TÜRKÇE + DÜZ METİN)
+# MARKDOWN TEMİZLEYİCİ (PDF İÇİN)
+# --------------------------------------------------
+def temizle_markdown(text):
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.*?)\*", r"\1", text)
+    text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^-{3,}$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[\-\*]\s*", "• ", text, flags=re.MULTILINE)
+    return text
+
+# --------------------------------------------------
+# PDF OLUŞTURMA (LOGO + TEMİZ METİN)
 # --------------------------------------------------
 def create_pdf(plan_text, sinif, ders):
     buffer = io.BytesIO()
@@ -131,8 +137,9 @@ def create_pdf(plan_text, sinif, ders):
     story.append(Paragraph("Işıklı Dijital Pasaport Ders Planı", title_style))
     story.append(Spacer(1, 20))
 
-    # İçerik
-    for line in plan_text.split("\n"):
+    temiz_metin = temizle_markdown(plan_text)
+
+    for line in temiz_metin.split("\n"):
         story.append(Paragraph(line, body_style))
         story.append(Spacer(1, 8))
 
@@ -193,7 +200,7 @@ if submit_btn and kazanim and secilen_ders != "Seçiniz...":
             plan_metni = response.text
 
             st.success("✅ Ders Planı Hazırlandı")
-            st.text(plan_metni)  # MARKDOWN YOK
+            st.markdown(plan_metni)  # EKranda güzel
 
             pdf_buffer = create_pdf(plan_metni, sinif_duzeyi, secilen_ders)
 
