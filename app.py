@@ -1089,7 +1089,7 @@ Felsefenin Temel Konuları ve Problemleri - 10. Sınıf"
 
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.5-flash",
     system_instruction=gem_talimatlari
 )
 
