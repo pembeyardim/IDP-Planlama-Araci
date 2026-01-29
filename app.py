@@ -17,30 +17,30 @@ import re
 from datetime import datetime
 
 # --------------------------------------------------
-# ONLINE FONT (UNICODE – TÜRKÇE TAM DESTEK)
+# ONLINE FONT (TÜRKÇE TAM DESTEK)
 # --------------------------------------------------
 FONT_NAME = "NotoSans"
-FONT_FILE = "NotoSans-Regular.ttf"
-FONT_BOLD_FILE = "NotoSans-Bold.ttf"
+FONT_REG = "NotoSans-Regular.ttf"
+FONT_BOLD = "NotoSans-Bold.ttf"
 
-FONT_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
-FONT_BOLD_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Bold.ttf"
+URL_REG = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
+URL_BOLD = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Bold.ttf"
 
-if not os.path.exists(FONT_FILE):
-    urllib.request.urlretrieve(FONT_URL, FONT_FILE)
-if not os.path.exists(FONT_BOLD_FILE):
-    urllib.request.urlretrieve(FONT_BOLD_URL, FONT_BOLD_FILE)
+if not os.path.exists(FONT_REG):
+    urllib.request.urlretrieve(URL_REG, FONT_REG)
+if not os.path.exists(FONT_BOLD):
+    urllib.request.urlretrieve(URL_BOLD, FONT_BOLD)
 
-pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_FILE))
-pdfmetrics.registerFont(TTFont(f"{FONT_NAME}-Bold", FONT_BOLD_FILE))
+pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_REG))
+pdfmetrics.registerFont(TTFont(f"{FONT_NAME}-Bold", FONT_BOLD))
 
 # --------------------------------------------------
-# LOGO
+# LOGO (FMV)
 # --------------------------------------------------
 LOGO_URL = "https://fmv.edu.tr/Uploads/Gallery/Small/1447073e-282d-45bb-bc8c-04fe04087c89.jpg"
 
 # --------------------------------------------------
-# SAYFA
+# SAYFA AYARLARI
 # --------------------------------------------------
 st.set_page_config(
     page_title="Işıklı Eğitim Asistanı",
@@ -54,36 +54,81 @@ st.set_page_config(
 client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
 
 # --------------------------------------------------
-# DERSLER
+# SENİN KODLARIN – AYNEN
 # --------------------------------------------------
 MEB_DERSLERI = {
-    "Ortaokul": ["Fen Bilimleri", "Matematik", "Türkçe"],
-    "Lise (9-12)": ["Biyoloji", "Fizik", "Kimya", "Türk Dili ve Edebiyatı"]
+    "İlkokul": [
+        "Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri (3-4)", 
+        "Sosyal Bilgiler (4)", "İngilizce", "Görsel Sanatlar", "Müzik", "Oyun ve Fiziksel Etkinlikler"
+    ],
+    "Ortaokul": [
+        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
+        "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü ve Ahlak Bilgisi",
+        "Bilişim Teknolojileri ve Yazılım", "Teknoloji ve Tasarım"
+    ],
+    "Lise (9-12)": [
+        "Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", 
+        "Tarih", "Coğrafya", "Felsefe", "İngilizce", "Almanca/Fransızca",
+        "Sağlık Bilgisi ve Trafik Kültürü", "Bilgisayar Bilimi"
+    ]
 }
 
+IDP_ORNEKLERI = """
+- Beden Eğitimi: WorldWall + Quizizz (Disiplinler arası)
+- Müzik: Sibelius + Studio One (Dijital kayıt)
+- Biyoloji: Canva + ChatGPT + Gamma (Yapay Zeka Sunum)
+- Fizik: PhET Simulations (İnteraktif Laboratuvar)
+- Türk Dili: Canva Poster (Dilimizin Zenginlikleri)
+"""
+
+gem_talimatlari = f"""
+Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
+GÖREV: Işık Dijital Pasaport (IDP) felsefesine uygun, Türkiye Yüzyılı Maarif Modeli kazanımlarıyla uyumlu ders planı hazırla.
+
+IDP FELSEFESİ:
+- Dijital vatandaşlık, 21. yy becerileri, UDL (Farklılaştırılmış öğretim).
+- Teknoloji süs değil, öğrenme aracıdır.
+
+ZORUNLU FORMAT:
+- Aşağıdaki başlıkları MUTLAKA kullan
+- Başlıkları Markdown formatında **KALIN** yaz
+
+KULLANILACAK BAŞLIKLAR:
+**Seviye:**
+**Ders:**
+**Teknoloji Bağlantısı (Neden teknoloji?):**
+**Yapılan Ünite / Konu:**
+**Kullanılan Araç / Materyal Bilgisi:**
+**IDP Vizesi Olan Öğrenci Etkinliği:**
+**Sınıf Etkinliği:**
+
+KURUMSAL HAFIZA:
+{IDP_ORNEKLERI}
+
+ÖNEMLİ: KISA, ÖZ ve 2024-2025/2026 güncel eğitim teknolojilerini kullanarak cevap ver.
+"""
+
 # --------------------------------------------------
-# MARKDOWN → PDF PARSER
+# MARKDOWN → PDF (KALIN KORUNUR)
 # --------------------------------------------------
-def markdown_to_pdf_elements(text, styles):
+def markdown_to_pdf(text, styles):
     elements = []
 
     for line in text.split("\n"):
         line = line.strip()
+
         if not line:
-            elements.append(Spacer(1, 8))
+            elements.append(Spacer(1, 10))
             continue
 
-        # ## Başlık
-        if line.startswith("##"):
-            content = line.replace("##", "").strip()
-            elements.append(Paragraph(content, styles["h2"]))
-            elements.append(Spacer(1, 12))
+        if line.startswith("**") and line.endswith("**"):
+            title = line.replace("**", "")
+            elements.append(Paragraph(title, styles["bold"]))
+            elements.append(Spacer(1, 10))
             continue
 
-        # **Kalın**
         line = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", line)
 
-        # - Madde
         if line.startswith("-"):
             line = "• " + line[1:].strip()
 
@@ -93,7 +138,7 @@ def markdown_to_pdf_elements(text, styles):
     return elements
 
 # --------------------------------------------------
-# PDF
+# PDF OLUŞTURMA
 # --------------------------------------------------
 def create_pdf(plan_text, ders, unite):
     buffer = io.BytesIO()
@@ -108,11 +153,11 @@ def create_pdf(plan_text, ders, unite):
     )
 
     styles = {
-        "h2": ParagraphStyle(
-            "h2",
+        "bold": ParagraphStyle(
+            "bold",
             fontName=f"{FONT_NAME}-Bold",
-            fontSize=15,
-            leading=18
+            fontSize=13,
+            leading=16
         ),
         "body": ParagraphStyle(
             "body",
@@ -124,12 +169,11 @@ def create_pdf(plan_text, ders, unite):
 
     story = []
 
-    # Logo
     logo_data = io.BytesIO(urllib.request.urlopen(LOGO_URL).read())
     story.append(Image(logo_data, width=4*cm, height=4*cm))
     story.append(Spacer(1, 16))
 
-    story.extend(markdown_to_pdf_elements(plan_text, styles))
+    story.extend(markdown_to_pdf(plan_text, styles))
 
     doc.build(story)
     buffer.seek(0)
@@ -144,25 +188,34 @@ def create_pdf(plan_text, ders, unite):
 # --------------------------------------------------
 st.title("🎓 Işıklı Dijital Pasaport Planlama Asistanı")
 
-sinif = st.selectbox("Kademe", list(MEB_DERSLERI.keys()))
-ders = st.selectbox("Ders", MEB_DERSLERI[sinif])
-unite = st.text_input("Ünite Adı")
+col1, col2 = st.columns(2)
+
+with col1:
+    sinif = st.selectbox("Kademe", list(MEB_DERSLERI.keys()))
+
+with col2:
+    ders = st.selectbox("Ders", MEB_DERSLERI[sinif])
+
+unite = st.text_input("Ünite / Konu")
 kazanim = st.text_area("Kazanım")
 
 if st.button("Planı Oluştur"):
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=f"{ders} dersi {unite} ünitesi için IDP ders planı hazırla.",
-        config=types.GenerateContentConfig(temperature=0.7)
+        contents=f"{sinif} düzeyi {ders} dersi, ünite: {unite}, kazanım: {kazanim}",
+        config=types.GenerateContentConfig(
+            system_instruction=gem_talimatlari,
+            temperature=0.7
+        )
     )
 
-    plan = response.text
-    st.markdown(plan)
+    plan_text = response.text
+    st.markdown(plan_text)
 
-    pdf_buffer, pdf_name = create_pdf(plan, ders, unite)
+    pdf_buffer, pdf_name = create_pdf(plan_text, ders, unite)
 
     st.download_button(
-        "📄 PDF indir",
+        "📄 PDF olarak indir",
         data=pdf_buffer,
         file_name=pdf_name,
         mime="application/pdf"
