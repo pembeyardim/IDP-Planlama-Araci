@@ -2,246 +2,88 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-# PDF
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+# --- SAYFA AYARLARI ---
+st.set_page_config(page_title="Işıklı Eğitim Asistanı", layout="wide", page_icon="🎓")
 
-import io
-import os
-import urllib.request
-import re
-from datetime import datetime
+# --- API ANAHTARI KONTROLÜ ---
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+except:
+    st.error("API Anahtarı bulunamadı! Lütfen Streamlit secrets (GOOGLE_API_KEY) ekleyin.")
+    st.stop()
 
-# --------------------------------------------------
-# ONLINE FONT (TÜRKÇE TAM DESTEK)
-# --------------------------------------------------
-FONT_NAME = "NotoSans"
-FONT_REG = "NotoSans-Regular.ttf"
-FONT_BOLD = "NotoSans-Bold.ttf"
+# --- YENİ SDK İSTEMCİSİ (CLIENT) ---
+client = genai.Client(api_key=api_key)
 
-URL_REG = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
-URL_BOLD = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Bold.ttf"
-
-if not os.path.exists(FONT_REG):
-    urllib.request.urlretrieve(URL_REG, FONT_REG)
-if not os.path.exists(FONT_BOLD):
-    urllib.request.urlretrieve(URL_BOLD, FONT_BOLD)
-
-pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_REG))
-pdfmetrics.registerFont(TTFont(f"{FONT_NAME}-Bold", FONT_BOLD))
-
-# --------------------------------------------------
-# LOGO (FMV)
-# --------------------------------------------------
-LOGO_URL = "https://fmv.edu.tr/Uploads/Gallery/Small/1447073e-282d-45bb-bc8c-04fe04087c89.jpg"
-
-# --------------------------------------------------
-# SAYFA AYARLARI
-# --------------------------------------------------
-st.set_page_config(
-    page_title="Işıklı Eğitim Asistanı",
-    layout="wide",
-    page_icon="🎓"
-)
-
-# --------------------------------------------------
-# API
-# --------------------------------------------------
-client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
-
-# --------------------------------------------------
-# SENİN KODLARIN – AYNEN
-# --------------------------------------------------
-MEB_DERSLERI = {
-    "İlkokul": [
-        "Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri (3-4)", 
-        "Sosyal Bilgiler (4)", "İngilizce", "Görsel Sanatlar", "Müzik", "Oyun ve Fiziksel Etkinlikler"
-    ],
-    "Ortaokul": [
-        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
-        "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü ve Ahlak Bilgisi",
-        "Bilişim Teknolojileri ve Yazılım", "Teknoloji ve Tasarım"
-    ],
-    "Lise (9-12)": [
-        "Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", 
-        "Tarih", "Coğrafya", "Felsefe", "İngilizce", "Almanca/Fransızca",
-        "Sağlık Bilgisi ve Trafik Kültürü", "Bilgisayar Bilimi"
-    ]
-}
-
+# --- KURUMSAL HAFIZA VE TALİMATLAR ---
 IDP_ORNEKLERI = """
-- Beden Eğitimi: WorldWall + Quizizz (Disiplinler arası)
-- Müzik: Sibelius + Studio One (Dijital kayıt)
-- Biyoloji: Canva + ChatGPT + Gamma (Yapay Zeka Sunum)
-- Fizik: PhET Simulations (İnteraktif Laboratuvar)
-- Türk Dili: Canva Poster (Dilimizin Zenginlikleri)
+1. Beden Eğitimi (Hazırlık) - WorldWall + Quizizz
+2. Müzik (9-10) - Sibelius + Studio One
+3. Biyoloji (9) - Canva + ChatGPT + Gamma
+4. Fizik (9) - PhET Simulations
+5. Türk Dili (Hazırlık) - Canva Poster Tasarımı
 """
 
 gem_talimatlari = f"""
 Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
-GÖREV: Işık Dijital Pasaport (IDP) felsefesine uygun, Türkiye Yüzyılı Maarif Modeli kazanımlarıyla uyumlu ders planı hazırla.
+GÖREV: Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
+IDP FELSEFESİ: Dijital vatandaşlık, UDL uyumlu, teknoloji entegreli.
 
-IDP FELSEFESİ:
-- Dijital vatandaşlık, 21. yy becerileri, UDL (Farklılaştırılmış öğretim).
-- Teknoloji süs değil, öğrenme aracıdır.
-
-ZORUNLU FORMAT:
-- Aşağıdaki başlıkları MUTLAKA kullan
-- Başlıkları Markdown formatında **KALIN** yaz
-
-KULLANILACAK BAŞLIKLAR:
-**Seviye:**
-**Ders:**
-**Teknoloji Bağlantısı (Neden teknoloji?):**
-**Yapılan Ünite / Konu:**
-**Kullanılan Araç / Materyal Bilgisi:**
-**IDP Vizesi Olan Öğrenci Etkinliği:**
-**Sınıf Etkinliği:**
+ZORUNLU BAŞLIKLAR:
+1. Seviye 2. Ders 3. Teknoloji Bağlantısı 4. Yapılan Ünite 5. Kullanılan Araç Bilgisi 
+6. IDP Vizesi Olan Öğrenci Etkinliği 7. Sınıf Etkinliği (Vizesiz)
 
 KURUMSAL HAFIZA:
 {IDP_ORNEKLERI}
-
-ÖNEMLİ: KISA, ÖZ ve 2024-2025/2026 güncel eğitim teknolojilerini kullanarak cevap ver.
 """
 
-# --------------------------------------------------
-# MARKDOWN → PDF (KALIN KORUNUR)
-# --------------------------------------------------
-def markdown_to_pdf(text, styles):
-    elements = []
+# --- ARAYÜZ ---
+st.title("🎓 Işıklı Dijital Pasaport Asistanı")
+st.markdown("Ders ve Konu bilgisini girin, planınızı güncel Web verileriyle oluşturun.")
 
-    for line in text.split("\n"):
-        line = line.strip()
+with st.form("plan_form"):
+    col1, col2 = st.columns(2)
+    with col1:
+        sinif = st.selectbox("Sınıf Düzeyi", ["İlkokul", "Ortaokul", "Lise (9-12)"])
+        ders = st.text_input("Ders Adı", placeholder="Örn: Matematik")
+    with col2:
+        konu = st.text_input("Konu / Kazanım", placeholder="Örn: Sürdürülebilirlik")
+    
+    submit_btn = st.form_submit_button("Planı Oluştur ✨")
 
-        if not line:
-            elements.append(Spacer(1, 10))
-            continue
+# --- SONUÇ ALANI ---
+if submit_btn and ders and konu:
+    with st.spinner('Gemini, güncel eğitim araçlarını tarıyor...'):
+        try:
+            # Google Search Tool Tanımlama
+            grounding_tool = types.Tool(google_search=types.GoogleSearch())
+            
+            # İçerik Yapılandırması (Sistem Talimatı Buraya Eklenir)
+            config = types.GenerateContentConfig(
+                system_instruction=gem_talimatlari,
+                tools=[grounding_tool],
+                temperature=0.7
+            )
 
-        if line.startswith("**") and line.endswith("**"):
-            title = line.replace("**", "")
-            elements.append(Paragraph(title, styles["bold"]))
-            elements.append(Spacer(1, 10))
-            continue
+            prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Işıklı Pasaport formatında, 2024-2025 güncel araçlarını içeren bir plan hazırla."
+            
+            # Yanıt Üretme
+            response = client.models.generate_content(
+                model="gemini-2.5-flash", # En güncel model
+                contents=prompt,
+                config=config,
+            )
 
-        line = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", line)
+            st.markdown("---")
+            # Yanıt içeriğini bastırma (Grounding metadata varsa alt bilgi olarak eklenebilir)
+            st.markdown(response.text)
+            
+            if response.candidates[0].grounding_metadata:
+                 with st.expander("Kaynaklar ve Arama Bilgisi"):
+                     st.write("Bu yanıt Google Arama sonuçları ile desteklenmiştir.")
 
-        if line.startswith("-"):
-            line = "• " + line[1:].strip()
+        except Exception as e:
+            st.error(f"Bir hata oluştu: {e}")
 
-        elements.append(Paragraph(line, styles["body"]))
-        elements.append(Spacer(1, 6))
-
-    return elements
-
-# --------------------------------------------------
-# PDF OLUŞTURMA
-# --------------------------------------------------
-def create_pdf(plan_text, ders, unite):
-    buffer = io.BytesIO()
-
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=2*cm,
-        leftMargin=2*cm,
-        topMargin=2*cm,
-        bottomMargin=2*cm
-    )
-
-    styles = {
-        "bold": ParagraphStyle(
-            "bold",
-            fontName=f"{FONT_NAME}-Bold",
-            fontSize=13,
-            leading=16
-        ),
-        "body": ParagraphStyle(
-            "body",
-            fontName=FONT_NAME,
-            fontSize=11,
-            leading=14
-        )
-    }
-
-    story = []
-
-    logo_data = io.BytesIO(urllib.request.urlopen(LOGO_URL).read())
-    story.append(Image(logo_data, width=4*cm, height=4*cm))
-    story.append(Spacer(1, 16))
-
-    story.extend(markdown_to_pdf(plan_text, styles))
-
-    doc.build(story)
-    buffer.seek(0)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{ders}_{unite}_{timestamp}.pdf".replace(" ", "_")
-
-    return buffer, filename
-
-# --------------------------------------------------
-# ARAYÜZ
-# --------------------------------------------------
-st.title("🎓 Işıklı Dijital Pasaport Planlama Asistanı")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    sinif = st.selectbox("Kademe", list(MEB_DERSLERI.keys()))
-
-with col2:
-    ders = st.selectbox("Ders", MEB_DERSLERI[sinif])
-
-unite = st.text_input("Ünite / Konu")
-kazanim = st.text_area("Kazanım")
-
-if st.button("Planı Oluştur"):
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=f"""
-Aşağıdaki şablona AYNEN UYARAK cevap ver.
-Başlıkları MUTLAKA **KALIN** yaz.
-Başlık sırasını DEĞİŞTİRME.
-
-**Seviye:**
-{sinif}
-
-**Ders:**
-{ders}
-
-**Teknoloji Bağlantısı (Neden teknoloji?):**
-
-**Yapılan Ünite / Konu:**
-{unite}
-
-**Kullanılan Araç / Materyal Bilgisi:**
-
-**IDP Vizesi Olan Öğrenci Etkinliği:**
-
-**Sınıf Etkinliği:**
-
-Kazanım:
-{kazanim}
-"""
-,
-        config=types.GenerateContentConfig(
-            system_instruction=gem_talimatlari,
-            temperature=0.7
-        )
-    )
-
-    plan_text = response.text
-    st.markdown(plan_text)
-
-    pdf_buffer, pdf_name = create_pdf(plan_text, ders, unite)
-
-    st.download_button(
-        "📄 PDF olarak indir",
-        data=pdf_buffer,
-        file_name=pdf_name,
-        mime="application/pdf"
-    )
+# --- ETKİLEŞİMLİ SON ---
+st.info("💡 Not: Planı beğendiyseniz kopyalayıp ders defterinize ekleyebilirsiniz.")
