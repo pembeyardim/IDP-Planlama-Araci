@@ -5,17 +5,13 @@ import google.generativeai as genai
 st.set_page_config(page_title="Işıklı Eğitim Asistanı", layout="wide")
 
 # --- API ANAHTARI KONTROLÜ ---
-# Anahtarı Streamlit'in güvenli kasasından (Secrets) alacağız
 try:
-  api_key = st.secrets["GOOGLE_API_KEY"]
+    api_key = st.secrets["GOOGLE_API_KEY"]
 except:
     st.error("API Anahtarı bulunamadı! Lütfen Streamlit ayarlarından ekleyin.")
     st.stop()
 
-# --- GEMINI AYARLARI ---
-# Buraya kendi GEM talimatlarını yapıştırabilirsin.
-# KURUMSAL HAFIZA (IDP Örnekleri)
-# ============================================
+# --- KURUMSAL HAFIZA ---
 IDP_ORNEKLERI = """
 **IDP Başarı Örnekleri:**
 
@@ -46,7 +42,8 @@ IDP_ORNEKLERI = """
 - PhET, Biomanbio (Simülasyon)
 - Padlet, Google Docs (İşbirliği)
 """
-gem_talimatlari = """
+
+gem_talimatlari = f"""
 Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
 
 **GÖREV:** Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
@@ -77,11 +74,17 @@ Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
 - Küfür/argo kullanma
 """
 
+# --- GEMINI AYARLARI (GOOGLE SEARCH İLE) ---
 genai.configure(api_key=api_key)
+
+# Google Search aracını tanımla
+from google.generativeai.types import Tool
+google_search_tool = Tool(google_search={})
+
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-2.0-flash-exp",  # veya "gemini-2.5-flash-latest"
     system_instruction=gem_talimatlari,
-    tools='google_search_retrieval'  # Canlı web araması
+    tools=[google_search_tool]  # Liste olarak ekle
 )
 
 # --- ARAYÜZ (FRONTEND) ---
@@ -102,7 +105,7 @@ with st.form("plan_form"):
 if submit_btn and ders and konu:
     with st.spinner('Gemini, Işıklı Pasaport kriterlerine göre düşünüyor...'):
         try:
-            prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Lütfen Işıklı Pasaport formatında ders planı hazırla."
+            prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Lütfen Işıklı Pasaport formatında ders planı hazırla. Güncel eğitim teknolojileri önermek için web araması yap."
             response = model.generate_content(prompt)
             st.markdown("---")
             st.markdown(response.text)
