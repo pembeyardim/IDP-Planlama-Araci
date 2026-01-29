@@ -55,10 +55,7 @@ with st.form("plan_form"):
 if submit_btn and ders and konu:
     with st.spinner('Gemini, güncel eğitim araçlarını tarıyor...'):
         try:
-            # Google Search Tool Tanımlama
             grounding_tool = types.Tool(google_search=types.GoogleSearch())
-            
-            # İçerik Yapılandırması (Sistem Talimatı Buraya Eklenir)
             config = types.GenerateContentConfig(
                 system_instruction=gem_talimatlari,
                 tools=[grounding_tool],
@@ -67,20 +64,41 @@ if submit_btn and ders and konu:
 
             prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Işıklı Pasaport formatında, 2024-2025 güncel araçlarını içeren bir plan hazırla."
             
-            # Yanıt Üretme
             response = client.models.generate_content(
-                model="gemini-2.5-flash", # En güncel model
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=config,
             )
 
             st.markdown("---")
-            # Yanıt içeriğini bastırma (Grounding metadata varsa alt bilgi olarak eklenebilir)
-            st.markdown(response.text)
+            st.markdown(response.text) # Modelin ana yanıtı
+
+            # --- DETAYLI KAYNAKÇA BÖLÜMÜ ---
+            metadata = response.candidates[0].grounding_metadata
             
-            if response.candidates[0].grounding_metadata:
-                 with st.expander("Kaynaklar ve Arama Bilgisi"):
-                     st.write("Bu yanıt Google Arama sonuçları ile desteklenmiştir.")
+            if metadata:
+                with st.expander("🔍 Kullanılan Kaynaklar ve Aramalar", expanded=False):
+                    # 1. Yapılan Aramalar
+                    if metadata.web_search_queries:
+                        st.subheader("Yapılan Web Aramaları")
+                        for query in metadata.web_search_queries:
+                            st.write(f"- *{query}*")
+                    
+                    st.divider()
+
+                    # 2. Kaynak Siteler (Citations)
+                    if metadata.grounding_chunks:
+                        st.subheader("Yararlanılan Web Siteleri")
+                        # Tekrar eden linkleri temizlemek için set kullanalım
+                        unique_sources = {}
+                        for chunk in metadata.grounding_chunks:
+                            if chunk.web:
+                                unique_sources[chunk.web.uri] = chunk.web.title
+                        
+                        for uri, title in unique_sources.items():
+                            st.markdown(f"🔗 [{title}]({uri})")
+                    else:
+                        st.info("Bu yanıt için spesifik bir web kaynağına ihtiyaç duyulmadı.")
 
         except Exception as e:
             st.error(f"Bir hata oluştu: {e}")
