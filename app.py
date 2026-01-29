@@ -80,7 +80,7 @@ Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash",
-    system_instruction=gem_talimatlari
+    system_instruction=gem_talimatlari,
     tools='google_search_retrieval'  # Canlı web araması
 )
 
