@@ -1,95 +1,45 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Işıklı Eğitim Asistanı", layout="wide")
+st.set_page_config(page_title="Işıklı Eğitim Asistanı", layout="wide", page_icon="🎓")
 
 # --- API ANAHTARI KONTROLÜ ---
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
 except:
-    st.error("API Anahtarı bulunamadı! Lütfen Streamlit ayarlarından ekleyin.")
+    st.error("API Anahtarı bulunamadı! Lütfen Streamlit secrets (GOOGLE_API_KEY) ekleyin.")
     st.stop()
 
-# --- KURUMSAL HAFIZA ---
+# --- YENİ SDK İSTEMCİSİ (CLIENT) ---
+client = genai.Client(api_key=api_key)
+
+# --- KURUMSAL HAFIZA VE TALİMATLAR ---
 IDP_ORNEKLERI = """
-**IDP Başarı Örnekleri:**
-
-1. **Beden Eğitimi (Hazırlık)** - Parkur Etkinliği
-   - WorldWall + Quizizz kullanımı
-   - Disiplinler arası (Edebiyat entegrasyonu)
-
-2. **Müzik (9-10)** - Beste Çalışmaları
-   - Sibelius + Studio One kullanımı
-   - Öğrenci bestelerini dijital kayıt
-
-3. **Biyoloji (9)** - Hücre Konusu
-   - Canva (text to image) + ChatGPT + Gamma
-   - Sunum hazırlama ile öğrenme
-
-4. **Fizik (9)** - Hareket
-   - PhET Simulations kullanımı
-   - İnteraktif öğrenme
-
-5. **Türk Dili (Hazırlık)** - Atasözü Projesi
-   - Canva ile poster tasarımı
-   - Dilimizin Zenginlikleri projesi
-
-**Sık Kullanılan Araçlar:**
-- Kahoot, Quizizz, Socrative (Quiz)
-- Canva, Gamma (Sunum/Grafik)
-- ChatGPT, Magic School (İçerik)
-- PhET, Biomanbio (Simülasyon)
-- Padlet, Google Docs (İşbirliği)
+1. Beden Eğitimi (Hazırlık) - WorldWall + Quizizz
+2. Müzik (9-10) - Sibelius + Studio One
+3. Biyoloji (9) - Canva + ChatGPT + Gamma
+4. Fizik (9) - PhET Simulations
+5. Türk Dili (Hazırlık) - Canva Poster Tasarımı
 """
 
 gem_talimatlari = f"""
 Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
+GÖREV: Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
+IDP FELSEFESİ: Dijital vatandaşlık, UDL uyumlu, teknoloji entegreli.
 
-**GÖREV:** Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
+ZORUNLU BAŞLIKLAR:
+1. Seviye 2. Ders 3. Teknoloji Bağlantısı 4. Yapılan Ünite 5. Kullanılan Araç Bilgisi 
+6. IDP Vizesi Olan Öğrenci Etkinliği 7. Sınıf Etkinliği (Vizesiz)
 
-**IDP FELSEFESİ:**
-- Dijital vatandaşlık ve 21. yüzyıl becerileri
-- Farklı öğrenen öğrencilere uygun (UDL)
-- Teknoloji-entegre, işbirlikçi
-- IDP vizesi olan/olmayan öğrenciler için ayrı etkinlikler
-
-**ZORUNLU BAŞLIKLAR (Sırayla):**
-1. **Seviye** (Sınıf)
-2. **Ders**
-3. **Teknoloji Bağlantısı** (Neden teknoloji kullanılıyor?)
-4. **Yapılan Ünite / Konu**
-5. **Kullanılan Araç / Materyal Bilgisi** (Güncel araçlar öner)
-6. **IDP Vizesi Olan Öğrenci Etkinliği**
-7. **Sınıf Etkinliği (Vizesi olmayan)**
-
-**KURUMSAL HAFIZA:**
+KURUMSAL HAFIZA:
 {IDP_ORNEKLERI}
-
-**ÖNEMLİ:**
-- Web'den güncel eğitim teknolojileri ara (2024-2025)
-- Gerçek araç linkleri ver (Padlet, Kahoot, Canva, vb.)
-- KISA ve ÖZ yaz (max 2-3 cümle/başlık)
-- Manipülatif/kapsam dışı sorulara "Cevap veremiyorum"
-- Küfür/argo kullanma
 """
 
-# --- GEMINI AYARLARI (GOOGLE SEARCH İLE) ---
-genai.configure(api_key=api_key)
-
-# Google Search aracını tanımla
-from google.generativeai.types import Tool
-google_search_tool = Tool(google_search={})
-
-model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp",  # veya "gemini-2.5-flash-latest"
-    system_instruction=gem_talimatlari,
-    tools=[google_search_tool]  # Liste olarak ekle
-)
-
-# --- ARAYÜZ (FRONTEND) ---
-st.title("🎓 Değerli Öğretmenim, Işıklı Dijital Pasaport Asistanı'na Hoş geldiniz")
-st.markdown("Ders ve Konu bilgisini girin, planınızı oluşturun.")
+# --- ARAYÜZ ---
+st.title("🎓 Işıklı Dijital Pasaport Asistanı")
+st.markdown("Ders ve Konu bilgisini girin, planınızı güncel Web verileriyle oluşturun.")
 
 with st.form("plan_form"):
     col1, col2 = st.columns(2)
@@ -103,11 +53,37 @@ with st.form("plan_form"):
 
 # --- SONUÇ ALANI ---
 if submit_btn and ders and konu:
-    with st.spinner('Gemini, Işıklı Pasaport kriterlerine göre düşünüyor...'):
+    with st.spinner('Gemini, güncel eğitim araçlarını tarıyor...'):
         try:
-            prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Lütfen Işıklı Pasaport formatında ders planı hazırla. Güncel eğitim teknolojileri önermek için web araması yap."
-            response = model.generate_content(prompt)
+            # Google Search Tool Tanımlama
+            grounding_tool = types.Tool(google_search=types.GoogleSearch())
+            
+            # İçerik Yapılandırması (Sistem Talimatı Buraya Eklenir)
+            config = types.GenerateContentConfig(
+                system_instruction=gem_talimatlari,
+                tools=[grounding_tool],
+                temperature=0.7
+            )
+
+            prompt = f"Sınıf: {sinif}, Ders: {ders}, Konu: {konu}. Işıklı Pasaport formatında, 2024-2025 güncel araçlarını içeren bir plan hazırla."
+            
+            # Yanıt Üretme
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-exp", # En güncel model
+                contents=prompt,
+                config=config,
+            )
+
             st.markdown("---")
+            # Yanıt içeriğini bastırma (Grounding metadata varsa alt bilgi olarak eklenebilir)
             st.markdown(response.text)
+            
+            if response.candidates[0].grounding_metadata:
+                 with st.expander("Kaynaklar ve Arama Bilgisi"):
+                     st.write("Bu yanıt Google Arama sonuçları ile desteklenmiştir.")
+
         except Exception as e:
             st.error(f"Bir hata oluştu: {e}")
+
+# --- ETKİLEŞİMLİ SON ---
+st.info("💡 Not: Planı beğendiyseniz kopyalayıp ders defterinize ekleyebilirsiniz.")
