@@ -69,7 +69,7 @@ if submit_btn and ders and konu:
             
             # Yanıt Üretme
             response = client.models.generate_content(
-                model="gemini-2.5-flash-latest", # En güncel model
+                model="gemini-2.5-flash", # En güncel model
                 contents=prompt,
                 config=config,
             )
