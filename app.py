@@ -16,18 +16,20 @@ except Exception:
 # --- 3. MEB MAARİF MODELİ DERS LİSTELERİ ---
 MEB_DERSLERI = {
     "İlkokul": [
-        "Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri (3-4)", 
-        "Sosyal Bilgiler (4)", "İngilizce", "Görsel Sanatlar", "Müzik", "Oyun ve Fiziksel Etkinlikler"
+        "Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri", 
+        "Sosyal Bilgiler", "İngilizce", "Din Kültürü ve Ahlak Bilgisi",
+        "Görsel Sanatlar", "Müzik", "Oyun ve Fiziki Etkinlikler", "İnsan Hakları, Yurttaşlık ve Demokrasi"
     ],
     "Ortaokul": [
         "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
         "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce", "Din Kültürü ve Ahlak Bilgisi",
-        "Bilişim Teknolojileri ve Yazılım", "Teknoloji ve Tasarım"
+        "Bilişim Teknolojileri ve Yazılım", "Teknoloji ve Tasarım", "Görsel Sanatlar", "Müzik", "Beden Eğitimi ve Spor"
     ],
     "Lise (9-12)": [
         "Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", 
-        "Tarih", "Coğrafya", "Felsefe", "İngilizce", "Almanca/Fransızca",
-        "Sağlık Bilgisi ve Trafik Kültürü", "Bilgisayar Bilimi"
+        "Tarih", "Coğrafya", "Felsefe", "İngilizce", "İkinci Yabancı Dil (Almanca/Fransızca)",
+        "Din Kültürü ve Ahlak Bilgisi", "Beden Eğitimi ve Spor", "Görsel Sanatlar/Müzik",
+        "Bilgisayar Bilimi / Bilişim Teknolojileri", "Sağlık Bilgisi ve Trafik Kültürü"
     ]
 }
 
