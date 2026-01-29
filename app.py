@@ -202,7 +202,32 @@ kazanim = st.text_area("Kazanım")
 if st.button("Planı Oluştur"):
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=f"{sinif} düzeyi {ders} dersi, ünite: {unite}, kazanım: {kazanim}",
+        contents=f"""
+Aşağıdaki şablona AYNEN UYARAK cevap ver.
+Başlıkları MUTLAKA **KALIN** yaz.
+Başlık sırasını DEĞİŞTİRME.
+
+**Seviye:**
+{sinif}
+
+**Ders:**
+{ders}
+
+**Teknoloji Bağlantısı (Neden teknoloji?):**
+
+**Yapılan Ünite / Konu:**
+{unite}
+
+**Kullanılan Araç / Materyal Bilgisi:**
+
+**IDP Vizesi Olan Öğrenci Etkinliği:**
+
+**Sınıf Etkinliği:**
+
+Kazanım:
+{kazanim}
+"""
+,
         config=types.GenerateContentConfig(
             system_instruction=gem_talimatlari,
             temperature=0.7
