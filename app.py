@@ -4,13 +4,35 @@ from google.genai import types
 
 # PDF
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 import io
+import os
+import urllib.request
 
 # --------------------------------------------------
-# 1. SAYFA AYARLARI
+# ONLINE FONT (GOOGLE FONTS – TÜRKÇE UYUMLU)
+# --------------------------------------------------
+FONT_NAME = "NotoSans"
+FONT_FILE = "NotoSans-Regular.ttf"
+FONT_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
+
+if not os.path.exists(FONT_FILE):
+    urllib.request.urlretrieve(FONT_URL, FONT_FILE)
+
+pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_FILE))
+
+# --------------------------------------------------
+# LOGO (FMV)
+# --------------------------------------------------
+LOGO_URL = "https://fmv.edu.tr/Uploads/Gallery/Small/1447073e-282d-45bb-bc8c-04fe04087c89.jpg"
+
+# --------------------------------------------------
+# SAYFA AYARLARI
 # --------------------------------------------------
 st.set_page_config(
     page_title="Işıklı Eğitim Asistanı",
@@ -19,17 +41,16 @@ st.set_page_config(
 )
 
 # --------------------------------------------------
-# 2. API ANAHTARI
+# API ANAHTARI
 # --------------------------------------------------
 try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=st.secrets["GOOGLE_API_KEY"])
 except Exception:
     st.error("API Anahtarı bulunamadı! Streamlit Secrets ayarlarını kontrol edin.")
     st.stop()
 
 # --------------------------------------------------
-# 3. MEB DERS LİSTELERİ
+# MEB DERS LİSTELERİ
 # --------------------------------------------------
 MEB_DERSLERI = {
     "İlkokul": [
@@ -53,25 +74,22 @@ MEB_DERSLERI = {
 }
 
 # --------------------------------------------------
-# 4. SİSTEM TALİMATI
+# SİSTEM TALİMATI (MARKDOWN YOK)
 # --------------------------------------------------
-IDP_ORNEKLERI = """
-- Beden Eğitimi: WorldWall + Quizizz
-- Müzik: Sibelius + Studio One
-- Biyoloji: Canva + ChatGPT + Gamma
-- Fizik: PhET Simulations
-- Türk Dili: Canva Poster
-"""
-
-gem_talimatlari = f"""
+gem_talimatlari = """
 Sen Işık Okulları Eğitim Teknolojileri Koordinatörüsün.
-GÖREV: Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
-KURUMSAL HAFIZA: {IDP_ORNEKLERI}
-ÖNEMLİ: KISA, ÖZ ve 2024-2026 güncel eğitim teknolojilerini kullan.
+Işık Dijital Pasaport (IDP) felsefesine uygun ders planı hazırla.
+
+Kurallar:
+- Markdown kullanma
+- Yıldız, başlık, madde işareti kullanma
+- Düz paragraf metni üret
+- Türkçe karakterlere dikkat et
+- Kısa, net ve öğretmenlerin doğrudan kullanabileceği bir dil kullan
 """
 
 # --------------------------------------------------
-# 5. PDF OLUŞTURMA FONKSİYONU
+# PDF OLUŞTURMA (LOGO + TÜRKÇE + DÜZ METİN)
 # --------------------------------------------------
 def create_pdf(plan_text, sinif, ders):
     buffer = io.BytesIO()
@@ -79,33 +97,54 @@ def create_pdf(plan_text, sinif, ders):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=2*cm,
-        leftMargin=2*cm,
-        topMargin=2*cm,
-        bottomMargin=2*cm
+        rightMargin=2 * cm,
+        leftMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm
     )
 
-    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        name="Title",
+        fontName=FONT_NAME,
+        fontSize=16,
+        leading=20
+    )
+
+    body_style = ParagraphStyle(
+        name="Body",
+        fontName=FONT_NAME,
+        fontSize=11,
+        leading=14
+    )
+
     story = []
 
-    title = f"{sinif} – {ders}<br/>Işıklı Dijital Pasaport Ders Planı"
-    story.append(Paragraph(title, styles["Title"]))
+    # Logo
+    logo_data = io.BytesIO(urllib.request.urlopen(LOGO_URL).read())
+    logo = Image(logo_data, width=4 * cm, height=4 * cm)
+    story.append(logo)
     story.append(Spacer(1, 12))
 
+    # Başlık
+    story.append(Paragraph(f"{sinif} – {ders}", title_style))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("Işıklı Dijital Pasaport Ders Planı", title_style))
+    story.append(Spacer(1, 20))
+
+    # İçerik
     for line in plan_text.split("\n"):
-        safe_line = line.replace("<", "&lt;").replace(">", "&gt;")
-        story.append(Paragraph(safe_line, styles["Normal"]))
-        story.append(Spacer(1, 6))
+        story.append(Paragraph(line, body_style))
+        story.append(Spacer(1, 8))
 
     doc.build(story)
     buffer.seek(0)
     return buffer
 
 # --------------------------------------------------
-# 6. ARAYÜZ
+# ARAYÜZ
 # --------------------------------------------------
 st.title("🎓 Işıklı Dijital Pasaport Planlama Asistanı")
-st.markdown("Kademe ve ders seçimine göre alanlar **canlı** güncellenir.")
+st.write("Kademe ve ders seçimine göre alanlar canlı güncellenir.")
 
 col1, col2 = st.columns(2)
 
@@ -117,10 +156,9 @@ with col1:
     )
 
 with col2:
-    ders_listesi = MEB_DERSLERI[sinif_duzeyi]
     secilen_ders = st.selectbox(
         "2. Ders Seçin",
-        ["Seçiniz..."] + ders_listesi,
+        ["Seçiniz..."] + MEB_DERSLERI[sinif_duzeyi],
         key=f"ders_{sinif_duzeyi}"
     )
 
@@ -133,37 +171,29 @@ with st.form("plan_form"):
     submit_btn = st.form_submit_button("✨ Planı Oluştur")
 
 # --------------------------------------------------
-# 7. YAPAY ZEKA + PDF
+# YAPAY ZEKA + PDF
 # --------------------------------------------------
 if submit_btn and kazanim and secilen_ders != "Seçiniz...":
-
     with st.spinner("Ders planı hazırlanıyor..."):
         try:
-            grounding_tool = types.Tool(google_search=types.GoogleSearch())
-
-            config = types.GenerateContentConfig(
-                system_instruction=gem_talimatlari,
-                tools=[grounding_tool],
-                temperature=0.7
-            )
-
-            prompt = (
-                f"KADEME: {sinif_duzeyi}, "
-                f"DERS: {secilen_ders}, "
-                f"KAZANIM: {kazanim}. "
-                f"Işıklı Dijital Pasaport formatında 2025-2026 için plan hazırla."
-            )
-
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=prompt,
-                config=config
+                contents=(
+                    f"Kademe: {sinif_duzeyi}. "
+                    f"Ders: {secilen_ders}. "
+                    f"Kazanım: {kazanim}. "
+                    f"2025-2026 eğitim yılı için ders planı hazırla."
+                ),
+                config=types.GenerateContentConfig(
+                    system_instruction=gem_talimatlari,
+                    temperature=0.7
+                )
             )
 
             plan_metni = response.text
 
             st.success("✅ Ders Planı Hazırlandı")
-            st.markdown(plan_metni)
+            st.text(plan_metni)  # MARKDOWN YOK
 
             pdf_buffer = create_pdf(plan_metni, sinif_duzeyi, secilen_ders)
 
@@ -178,7 +208,7 @@ if submit_btn and kazanim and secilen_ders != "Seçiniz...":
             st.error(f"Hata oluştu: {e}")
 
 # --------------------------------------------------
-# 8. FOOTER
+# FOOTER
 # --------------------------------------------------
 st.divider()
 st.caption("Işık Okulları Eğitim Teknolojileri Koordinatörlüğü için geliştirilmiştir.")
